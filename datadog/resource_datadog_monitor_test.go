@@ -343,6 +343,32 @@ func TestAccDatadogMonitor_UpdatedToRemoveTags(t *testing.T) {
 	})
 }
 
+func TestAccDatadogMonitor_UpdatedToRemoveSilenced(t *testing.T) {
+	resource.Test(t, resource.TestCase{
+		PreCheck:     func() { testAccPreCheck(t) },
+		Providers:    testAccProviders,
+		CheckDestroy: testAccCheckDatadogMonitorDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccCheckDatadogMonitorConfigUpdated,
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckDatadogMonitorExists("datadog_monitor.foo"),
+					resource.TestCheckResourceAttr(
+						"datadog_monitor.foo", "silenced.*", "0"),
+				),
+			},
+			{
+				Config: testAccCheckDatadogMonitorConfigUpdatedWithSilenceRemoved,
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckDatadogMonitorExists("datadog_monitor.foo"),
+					resource.TestCheckNoResourceAttr(
+						"datadog_monitor.foo", "silenced.*"),
+				),
+			},
+		},
+	})
+}
+
 func TestAccDatadogMonitor_TrimWhitespace(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck:     func() { testAccPreCheck(t) },
@@ -612,6 +638,38 @@ resource "datadog_monitor" "foo" {
   silenced {
 	"*" = 0
   }
+}
+`
+
+const testAccCheckDatadogMonitorConfigUpdatedWithSilenceRemoved = `
+resource "datadog_monitor" "foo" {
+  name = "name for monitor bar"
+  type = "query alert"
+  message = "a different message Notify: @hipchat-channel"
+  escalation_message = "the situation has escalated @pagerduty"
+
+  query = "avg(last_1h):avg:aws.ec2.cpu{environment:bar,host:bar} by {host} > 3"
+
+  thresholds {
+	ok                = "0.0"
+	warning           = "1.0"
+	warning_recovery  = "0.5"
+	critical          = "3.0"
+	critical_recovery = "2.5"
+  }
+
+  notify_no_data = true
+  new_host_delay = 900
+  evaluation_delay = 800
+  no_data_timeframe = 20
+  renotify_interval = 40
+  escalation_message = "the situation has escalated! @pagerduty"
+  notify_audit = true
+  timeout_h = 70
+  include_tags = false
+  require_full_window = false
+  locked = true
+  tags = ["baz:qux", "quux"]
 }
 `
 
